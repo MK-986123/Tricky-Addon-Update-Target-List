@@ -158,9 +158,33 @@ set_security_patch() {
     [ -z "$security_patch" ] && security_patch=$(getprop ro.build.version.security_patch) # Fallback
 
     formatted_security_patch=$(echo "$security_patch" | sed 's/-//g')
-    security_patch_after_1y=$(echo "$formatted_security_patch + 10000" | bc)
+    security_patch_after_1y=$((formatted_security_patch + 10000))
     TODAY=$(date +%Y%m%d)
+    
+    # Enhanced validation for Android 16+ strong integrity requirements
+    # Security patch must be within the last year to pass strong integrity
     if [ -n "$formatted_security_patch" ] && [ "$TODAY" -lt "$security_patch_after_1y" ]; then
+        SDK_VERSION=$(getprop ro.build.version.sdk)
+        # For Android 16 (SDK 35+), ensure security patch is more recent (within 6 months preferred)
+        if [ "$SDK_VERSION" -ge 35 ]; then
+            # Calculate 6 months ago from today (YYYYMMDD format)
+            # Extract year and month from security patch
+            patch_year=$(echo "$formatted_security_patch" | cut -c 1-4)
+            patch_month=$(echo "$formatted_security_patch" | cut -c 5-6)
+            today_year=$(echo "$TODAY" | cut -c 1-4)
+            today_month=$(echo "$TODAY" | cut -c 5-6)
+            
+            # Simple month difference calculation (year * 12 + month)
+            patch_month_total=$((patch_year * 12 + patch_month))
+            today_month_total=$((today_year * 12 + today_month))
+            month_diff=$((today_month_total - patch_month_total))
+            
+            if [ "$month_diff" -gt 6 ]; then
+                # Log warning but continue - patch is within 1 year but older than 6 months
+                echo "Warning: Security patch older than 6 months on Android 16+. Strong integrity may be affected." >&2
+            fi
+        fi
+        
         TS_version=$(grep "versionCode=" "/data/adb/modules/tricky_store/module.prop" | cut -d'=' -f2)
         # James Clef's TrickyStore fork (GitHub@qwq233/TrickyStore)
         if grep -q "James" "/data/adb/modules/tricky_store/module.prop" && ! grep -q "beakthoven" "/data/adb/modules/tricky_store/module.prop"; then
@@ -190,9 +214,26 @@ set_security_patch() {
 }
 
 get_latest_security_patch() {
+    # Try fetching from Android security bulletin (Pixel devices)
     security_patch=$(download "https://source.android.com/docs/security/bulletin/pixel" |
                      sed -n 's/.*<td>\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)<\/td>.*/\1/p' |
                      head -n 1)
+
+    # Fallback: try Samsung security bulletin for better Samsung/One UI coverage
+    if [ -z "$security_patch" ]; then
+        samsung_page=$(download "https://security.samsungmobile.com/securityUpdate.smsb" 2>/dev/null)
+        if [ -n "$samsung_page" ]; then
+            # Samsung security patches are released on the first day of each month
+            # Parse format: SMR-[A-Z]*-YYYY-MM and append "-01" for the day
+            samsung_patch=$(echo "$samsung_page" | 
+                           sed -n 's/.*SMR-[A-Z]*-\([0-9]\{4\}\)-\([0-9]\{2\}\).*/\1-\2-01/p' |
+                           head -n 1)
+            # Validate the parsed date format before using it
+            if echo "$samsung_patch" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-01$'; then
+                security_patch="$samsung_patch"
+            fi
+        fi
+    fi
 
     if [ -n "$security_patch" ]; then
         echo "$security_patch"

@@ -41,12 +41,35 @@ check_reset_prop "vendor.boot.vbmeta.device_state" "locked"
 check_reset_prop "vendor.boot.verifiedbootstate" "green"
 check_reset_prop "sys.oem_unlock_allowed" "0"
 
+# Android 16+ specific properties
+check_reset_prop "ro.boot.baseband" "unknown"
+check_reset_prop "ro.boot.bootdevice" "unknown"
+check_reset_prop "ro.boot.slot_suffix" ""
+empty_reset_prop "ro.boot.avb_version" "1.0"
+
 # MIUI specific
 check_reset_prop "ro.secureboot.lockstate" "locked"
 
 # Realme specific
 check_reset_prop "ro.boot.realmebootstate" "green"
 check_reset_prop "ro.boot.realme.lockstate" "1"
+
+# Samsung specific (One UI / Knox)
+check_reset_prop "ro.boot.em.status" "0x00"
+check_reset_prop "ro.boot.emmc_checksum" "0"
+check_reset_prop "ro.boot.sec_atd.tdropped" "0"
+check_reset_prop "ro.security.mdf" "Enabled"
+check_reset_prop "ro.security.mdf.ux" "Enabled"
+check_reset_prop "ro.security.mdf.result" "None"
+check_reset_prop "ro.boot.security_mode" "1526595585"
+check_reset_prop "ro.vendor.boot.em.status" "0x00"
+
+# OnePlus specific
+check_reset_prop "ro.is_ever_orange" "0"
+check_reset_prop "ro.vendor.boot.verifiedbootstate" "green"
+
+# Google Pixel specific
+check_reset_prop "ro.oem_unlock_supported" "0"
 
 # Hide that we booted from recovery when magisk is in recovery mode
 contains_reset_prop "ro.bootmode" "recovery" "unknown"
