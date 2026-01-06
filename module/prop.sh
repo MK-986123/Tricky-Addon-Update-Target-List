@@ -70,7 +70,6 @@ check_reset_prop "ro.vendor.boot.verifiedbootstate" "green"
 
 # Google Pixel specific
 check_reset_prop "ro.oem_unlock_supported" "0"
-check_reset_prop "ro.vendor.boot.warranty_bit" "0"
 
 # Hide that we booted from recovery when magisk is in recovery mode
 contains_reset_prop "ro.bootmode" "recovery" "unknown"

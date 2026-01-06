@@ -175,9 +175,9 @@ set_security_patch() {
             today_month=$(echo "$TODAY" | cut -c 5-6)
             
             # Simple month difference calculation (year * 12 + month)
-            patch_month_total=$(echo "$patch_year * 12 + $patch_month" | bc)
-            today_month_total=$(echo "$today_year * 12 + $today_month" | bc)
-            month_diff=$(echo "$today_month_total - $patch_month_total" | bc)
+            patch_month_total=$((patch_year * 12 + patch_month))
+            today_month_total=$((today_year * 12 + today_month))
+            month_diff=$((today_month_total - patch_month_total))
             
             if [ "$month_diff" -gt 6 ]; then
                 # Log warning but continue - patch is within 1 year but older than 6 months
@@ -221,12 +221,15 @@ get_latest_security_patch() {
 
     # Fallback: try Samsung security bulletin for better Samsung/One UI coverage
     if [ -z "$security_patch" ]; then
-        samsung_patch=$(download "https://security.samsungmobile.com/securityUpdate.smsb" |
-                        sed -n 's/.*SMR-[A-Z]*-\([0-9]\{4\}\)-\([0-9]\{2\}\).*/\1-\2-01/p' |
-                        head -n 1)
-        # Validate the parsed date format before using it
-        if echo "$samsung_patch" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-01$'; then
-            security_patch="$samsung_patch"
+        samsung_page=$(download "https://security.samsungmobile.com/securityUpdate.smsb" 2>/dev/null)
+        if [ -n "$samsung_page" ]; then
+            samsung_patch=$(echo "$samsung_page" | 
+                           sed -n 's/.*SMR-[A-Z]*-\([0-9]\{4\}\)-\([0-9]\{2\}\).*/\1-\2-01/p' |
+                           head -n 1)
+            # Validate the parsed date format before using it
+            if echo "$samsung_patch" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-01$'; then
+                security_patch="$samsung_patch"
+            fi
         fi
     fi
 
