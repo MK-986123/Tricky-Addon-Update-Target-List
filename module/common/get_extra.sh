@@ -167,8 +167,19 @@ set_security_patch() {
         SDK_VERSION=$(getprop ro.build.version.sdk)
         # For Android 16 (SDK 35+), ensure security patch is more recent (within 6 months preferred)
         if [ "$SDK_VERSION" -ge 35 ]; then
-            security_patch_after_6m=$(echo "$formatted_security_patch + 600" | bc)
-            if [ "$TODAY" -gt "$security_patch_after_6m" ]; then
+            # Calculate 6 months ago from today (YYYYMMDD format)
+            # Extract year and month from security patch
+            patch_year=$(echo "$formatted_security_patch" | cut -c 1-4)
+            patch_month=$(echo "$formatted_security_patch" | cut -c 5-6)
+            today_year=$(echo "$TODAY" | cut -c 1-4)
+            today_month=$(echo "$TODAY" | cut -c 5-6)
+            
+            # Simple month difference calculation (year * 12 + month)
+            patch_month_total=$(echo "$patch_year * 12 + $patch_month" | bc)
+            today_month_total=$(echo "$today_year * 12 + $today_month" | bc)
+            month_diff=$(echo "$today_month_total - $patch_month_total" | bc)
+            
+            if [ "$month_diff" -gt 6 ]; then
                 # Log warning but continue - patch is within 1 year but older than 6 months
                 echo "Warning: Security patch older than 6 months on Android 16+. Strong integrity may be affected." >&2
             fi
@@ -210,9 +221,13 @@ get_latest_security_patch() {
 
     # Fallback: try Samsung security bulletin for better Samsung/One UI coverage
     if [ -z "$security_patch" ]; then
-        security_patch=$(download "https://security.samsungmobile.com/securityUpdate.smsb" |
+        samsung_patch=$(download "https://security.samsungmobile.com/securityUpdate.smsb" |
                         sed -n 's/.*SMR-[A-Z]*-\([0-9]\{4\}\)-\([0-9]\{2\}\).*/\1-\2-01/p' |
                         head -n 1)
+        # Validate the parsed date format before using it
+        if echo "$samsung_patch" | grep -q '^[0-9]\{4\}-[0-9]\{2\}-01$'; then
+            security_patch="$samsung_patch"
+        fi
     fi
 
     if [ -n "$security_patch" ]; then

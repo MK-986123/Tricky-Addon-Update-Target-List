@@ -42,7 +42,6 @@ check_reset_prop "vendor.boot.verifiedbootstate" "green"
 check_reset_prop "sys.oem_unlock_allowed" "0"
 
 # Android 16+ specific properties
-check_reset_prop "ro.boot.avb_version" "1.0"
 check_reset_prop "ro.boot.baseband" "unknown"
 check_reset_prop "ro.boot.bootdevice" "unknown"
 check_reset_prop "ro.boot.slot_suffix" ""
