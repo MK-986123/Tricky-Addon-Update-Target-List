@@ -9,6 +9,8 @@ Configure Tricky Store target.txt with KSU WebUI.
 
 ## Requirements
 - [Tricky store](https://github.com/5ec1cff/TrickyStore) module installed
+- Android 10+ (Optimized for Android 16 with Samsung One UI 8 support)
+- For best Play Integrity results on Android 16: ensure security patch is within the last year (preferably within 6 months)
 
 ## Instructions
 ### KernelSU & Apatch

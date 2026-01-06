@@ -160,7 +160,20 @@ set_security_patch() {
     formatted_security_patch=$(echo "$security_patch" | sed 's/-//g')
     security_patch_after_1y=$(echo "$formatted_security_patch + 10000" | bc)
     TODAY=$(date +%Y%m%d)
+    
+    # Enhanced validation for Android 16+ strong integrity requirements
+    # Security patch must be within the last year to pass strong integrity
     if [ -n "$formatted_security_patch" ] && [ "$TODAY" -lt "$security_patch_after_1y" ]; then
+        SDK_VERSION=$(getprop ro.build.version.sdk)
+        # For Android 16 (SDK 35+), ensure security patch is more recent (within 6 months preferred)
+        if [ "$SDK_VERSION" -ge 35 ]; then
+            security_patch_after_6m=$(echo "$formatted_security_patch + 600" | bc)
+            if [ "$TODAY" -gt "$security_patch_after_6m" ]; then
+                # Log warning but continue - patch is within 1 year but older than 6 months
+                echo "Warning: Security patch older than 6 months on Android 16+. Strong integrity may be affected." >&2
+            fi
+        fi
+        
         TS_version=$(grep "versionCode=" "/data/adb/modules/tricky_store/module.prop" | cut -d'=' -f2)
         # James Clef's TrickyStore fork (GitHub@qwq233/TrickyStore)
         if grep -q "James" "/data/adb/modules/tricky_store/module.prop" && ! grep -q "beakthoven" "/data/adb/modules/tricky_store/module.prop"; then
@@ -190,9 +203,17 @@ set_security_patch() {
 }
 
 get_latest_security_patch() {
+    # Try fetching from Android security bulletin (Pixel devices)
     security_patch=$(download "https://source.android.com/docs/security/bulletin/pixel" |
                      sed -n 's/.*<td>\([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\)<\/td>.*/\1/p' |
                      head -n 1)
+
+    # Fallback: try Samsung security bulletin for better Samsung/One UI coverage
+    if [ -z "$security_patch" ]; then
+        security_patch=$(download "https://security.samsungmobile.com/securityUpdate.smsb" |
+                        sed -n 's/.*SMR-[A-Z]*-\([0-9]\{4\}\)-\([0-9]\{2\}\).*/\1-\2-01/p' |
+                        head -n 1)
+    fi
 
     if [ -n "$security_patch" ]; then
         echo "$security_patch"
