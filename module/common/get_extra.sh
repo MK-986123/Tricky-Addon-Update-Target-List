@@ -158,7 +158,7 @@ set_security_patch() {
     [ -z "$security_patch" ] && security_patch=$(getprop ro.build.version.security_patch) # Fallback
 
     formatted_security_patch=$(echo "$security_patch" | sed 's/-//g')
-    security_patch_after_1y=$(echo "$formatted_security_patch + 10000" | bc)
+    security_patch_after_1y=$((formatted_security_patch + 10000))
     TODAY=$(date +%Y%m%d)
     
     # Enhanced validation for Android 16+ strong integrity requirements
@@ -223,6 +223,8 @@ get_latest_security_patch() {
     if [ -z "$security_patch" ]; then
         samsung_page=$(download "https://security.samsungmobile.com/securityUpdate.smsb" 2>/dev/null)
         if [ -n "$samsung_page" ]; then
+            # Samsung security patches are released on the first day of each month
+            # Parse format: SMR-[A-Z]*-YYYY-MM and append "-01" for the day
             samsung_patch=$(echo "$samsung_page" | 
                            sed -n 's/.*SMR-[A-Z]*-\([0-9]\{4\}\)-\([0-9]\{2\}\).*/\1-\2-01/p' |
                            head -n 1)
